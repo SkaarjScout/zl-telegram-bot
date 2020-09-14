@@ -1,0 +1,8 @@
+Spreadsheets:
+    SpreadsheetId: '${SPREADSHEET_ID}'
+    CredentialsJson: '${CREDENTIALS_JSON}'
+    OauthRefreshToken: '${OAUTH_REFRESH_TOKEN}'
+TelegramBot:
+    TelegramBotToken: '${TELEGRAM_BOT_TOKEN}'
+    DebugEnabled: true
+    UpdateTimeout: 60

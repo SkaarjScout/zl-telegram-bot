@@ -7,31 +7,28 @@ import (
 	"os/signal"
 	"syscall"
 
+	"gopkg.in/yaml.v2"
+
+	"github.com/spf13/pflag"
+
 	"github.com/SkaarjScout/zl-telegram-bot/spreadsheets"
 	"github.com/SkaarjScout/zl-telegram-bot/tgbot"
 )
 
-var TELEGRAM_TOKEN = os.Getenv("TELEGRAM_TOKEN")
-var SPREADSHEET_ID = os.Getenv("SPREADSHEET_ID")
-var SHEETS_REFRESH_TOKEN = os.Getenv("SHEETS_REFRESH_TOKEN")
-
 func main() {
-	credentialsJson, err := ioutil.ReadFile("credentials.json")
+	configFileName := pflag.StringP("config", "c", "config.yaml", "Configuration file path")
+	pflag.Parse()
+
+	configYaml, err := ioutil.ReadFile(*configFileName)
 	if err != nil {
-		log.Panicf("Error on credentials file read: %v", err)
+		log.Panicf("Error on config file read: %v", err)
 	}
-	config := Config{
-		SpreadsheetsConfig: spreadsheets.Config{
-			SpreadsheetId:   SPREADSHEET_ID,
-			CredentialsJson: string(credentialsJson),
-			RefreshToken:    SHEETS_REFRESH_TOKEN,
-		},
-		TelegramBotConfig: tgbot.Config{
-			TelegramBotToken: TELEGRAM_TOKEN,
-			DebugEnabled:     true,
-			UpdateTimeout:    60,
-		},
+	configYamlExpanded := os.ExpandEnv(string(configYaml))
+	config := Config{}
+	if err := yaml.Unmarshal([]byte(configYamlExpanded), &config); err != nil {
+		log.Panicf("Error on config file read: %v", err)
 	}
+
 	spreadsheetsClient := spreadsheets.NewClient(config.SpreadsheetsConfig)
 	bot := tgbot.New(config.TelegramBotConfig, &spreadsheetsClient)
 
@@ -44,5 +41,6 @@ func main() {
 	select {
 	case <-interrupt:
 		botStop <- true
+		<-botStop
 	}
 }

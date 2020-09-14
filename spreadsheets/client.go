@@ -23,7 +23,7 @@ func NewClient(clientConfig Config) Client {
 		log.Panicf("Unable to parse app credentials to config: %v", err)
 	}
 	srv, err := sheets.NewService(context.Background(), option.WithTokenSource(
-		config.TokenSource(context.Background(), &oauth2.Token{RefreshToken: clientConfig.RefreshToken})),
+		config.TokenSource(context.Background(), &oauth2.Token{RefreshToken: clientConfig.OauthRefreshToken})),
 	)
 	if err != nil {
 		log.Panicf("Unable to create spreadsheets service: %v", err)

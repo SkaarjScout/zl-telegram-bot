@@ -42,7 +42,7 @@ func formatRowData(row []interface{}) string {
 	return fmt.Sprintf("Ник: %v\nИмя: %v\nБио: %v", row[0], row[1], row[2])
 }
 
-func (bot *Bot) Serve(stop <-chan bool) {
+func (bot *Bot) Serve(stop chan bool) {
 	updates, err := bot.botApi.GetUpdatesChan(bot.updateConfig)
 	if err != nil {
 		log.Panicf("Error on creating update channel: %v", err)
@@ -55,12 +55,14 @@ func (bot *Bot) Serve(stop <-chan bool) {
 			case update.Message == nil || !update.Message.IsCommand():
 				break
 			case update.Message.Command() == "find":
+				log.Print("Serving find")
 				if err = bot.serveFind(update); err != nil {
 					log.Print(err)
 				}
 			}
 		case <-stop:
 			log.Print("Got a stop signal")
+			stop <- true
 			return
 		}
 	}
