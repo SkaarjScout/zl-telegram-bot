@@ -43,7 +43,7 @@ func main() {
 	updates, err := bot.GetUpdatesChan(ucfg)
 	for update := range updates {
 		switch {
-		case !update.Message.IsCommand():
+		case update.Message == nil || !update.Message.IsCommand():
 			continue
 		case update.Message.Command() == "find":
 			nickname := update.Message.CommandArguments()
