@@ -15,7 +15,7 @@ type Client struct {
 	config  Config
 }
 
-func NewClient(clientConfig Config) *Client {
+func NewClient(clientConfig Config) Client {
 
 	// If modifying these scopes, delete your previously saved token.json.
 	config, err := google.ConfigFromJSON([]byte(clientConfig.CredentialsJson), sheets.SpreadsheetsReadonlyScope)
@@ -28,11 +28,11 @@ func NewClient(clientConfig Config) *Client {
 	if err != nil {
 		log.Panicf("Unable to create spreadsheets service: %v", err)
 	}
-	return &Client{srv, clientConfig}
+	return Client{srv, clientConfig}
 
 }
 
-func (client Client) FindRow(nickname string) ([]interface{}, error) {
+func (client *Client) FindRow(nickname string) ([]interface{}, error) {
 	resp, err := client.service.Spreadsheets.Values.Get(client.config.SpreadsheetId, "A:A").Do()
 	if err != nil {
 		return nil, fmt.Errorf("unable to get column from sheet: %w", err)
