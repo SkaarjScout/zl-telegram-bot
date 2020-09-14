@@ -35,10 +35,10 @@ func main() {
 	spreadsheetsClient := spreadsheets.NewClient(config.SpreadsheetsConfig)
 	bot := tgbot.New(config.TelegramBotConfig, &spreadsheetsClient)
 
-	interrupt := make(chan os.Signal)
+	interrupt := make(chan os.Signal, 2)
 	signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM)
 
-	botStop := make(chan bool, 2)
+	botStop := make(chan bool, 1)
 	go bot.Serve(botStop)
 
 	select {
