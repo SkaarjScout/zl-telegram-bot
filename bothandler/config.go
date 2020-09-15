@@ -1,4 +1,4 @@
-package tgbot
+package bothandler
 
 type Config struct {
 	TelegramBotToken string `yaml:"TelegramBotToken"`

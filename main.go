@@ -11,8 +11,8 @@ import (
 
 	"github.com/spf13/pflag"
 
+	"github.com/SkaarjScout/zl-telegram-bot/bothandler"
 	"github.com/SkaarjScout/zl-telegram-bot/spreadsheets"
-	"github.com/SkaarjScout/zl-telegram-bot/tgbot"
 )
 
 func main() {
@@ -30,7 +30,7 @@ func main() {
 	}
 
 	spreadsheetsClient := spreadsheets.NewClient(config.SpreadsheetsConfig)
-	bot := tgbot.New(config.TelegramBotConfig, &spreadsheetsClient)
+	bot := bothandler.New(config.TelegramBotConfig, &spreadsheetsClient)
 
 	interrupt := make(chan os.Signal, 2)
 	signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM)
