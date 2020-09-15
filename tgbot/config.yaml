@@ -7,3 +7,10 @@ TelegramBot:
     DebugEnabled: true
     UpdateTimeout: 60
     WorkerCount: 8
+    UserTableName: 'users'
+Postgres:
+    Host: 'localhost'
+    Port: 54320
+    User: '${PG_USER}'
+    Password: '${PG_PASSWORD}'
+    DbName: 'default'

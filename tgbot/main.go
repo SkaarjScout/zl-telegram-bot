@@ -31,18 +31,16 @@ func main() {
 		log.Panicf("Error on config file read: %v", err)
 	}
 
+	db := GetPostgres(config.PostgresConfig)
 	spreadsheetsClient := spreadsheets.NewClient(config.SpreadsheetsConfig)
-	bot := bothandler.New(config.TelegramBotConfig, &spreadsheetsClient)
-
-	interrupt := make(chan os.Signal)
-	signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM)
+	bot := bothandler.New(config.TelegramBotConfig, &spreadsheetsClient, db)
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	var wg sync.WaitGroup
 	bot.StartServe(ctx, &wg)
 
-	log.Print("Waiting for interrupt")
-
+	interrupt := make(chan os.Signal)
+	signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM)
 	<-interrupt
 	cancelFunc()
 	wg.Wait()

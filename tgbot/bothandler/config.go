@@ -5,4 +5,5 @@ type Config struct {
 	DebugEnabled     bool   `yaml:"DebugEnabled"`
 	UpdateTimeout    int    `yaml:"UpdateTimeout"`
 	WorkerCount      int    `yaml:"WorkerCount"`
+	UserTableName    string `yaml:"UserTableName"`
 }

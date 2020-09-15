@@ -2,6 +2,7 @@ package bothandler
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log"
 	"sync"
@@ -13,16 +14,21 @@ import (
 
 const (
 	Find string = "find"
+	Add  string = "add"
 )
 
 type Bot struct {
 	botApi             *tgbotapi.BotAPI
 	updateConfig       tgbotapi.UpdateConfig
 	spreadsheetsClient *spreadsheets.Client
+	db                 *sql.DB
 	botConfig          Config
 }
 
-func New(config Config, spreadsheetsClient *spreadsheets.Client) Bot {
+func New(
+	config Config,
+	spreadsheetsClient *spreadsheets.Client,
+	db *sql.DB) Bot {
 	bot, err := tgbotapi.NewBotAPI(config.TelegramBotToken)
 	if err != nil {
 		log.Panicf("Unable to connect to telegram bot: %v", err)
@@ -37,6 +43,7 @@ func New(config Config, spreadsheetsClient *spreadsheets.Client) Bot {
 		bot,
 		updateConfig,
 		spreadsheetsClient,
+		db,
 		config,
 	}
 }
@@ -69,8 +76,11 @@ func (bot *Bot) processUpdates(ctx context.Context, wg *sync.WaitGroup, updates 
 			case update.Message == nil || !update.Message.IsCommand():
 				break
 			case update.Message.Command() == Find:
-				log.Print("Serving find")
 				if err := bot.serveFind(update); err != nil {
+					log.Print(err)
+				}
+			case update.Message.Command() == Add:
+				if err := bot.serveAddUser(ctx, update); err != nil {
 					log.Print(err)
 				}
 			}
@@ -90,6 +100,17 @@ func (bot *Bot) serveFind(update tgbotapi.Update) error {
 		return fmt.Errorf("error on row find: %w", err)
 	}
 	msg := tgbotapi.NewMessage(update.Message.Chat.ID, formatRowData(row))
+	if _, err := bot.botApi.Send(msg); err != nil {
+		return fmt.Errorf("error on message send: %w", err)
+	}
+	return nil
+}
+
+func (bot *Bot) serveAddUser(ctx context.Context, update tgbotapi.Update) error {
+	if err := bot.addUser(ctx, update.Message.From.ID); err != nil {
+		return fmt.Errorf("error on user add: %w", err)
+	}
+	msg := tgbotapi.NewMessage(update.Message.Chat.ID, "User added")
 	if _, err := bot.botApi.Send(msg); err != nil {
 		return fmt.Errorf("error on message send: %w", err)
 	}
