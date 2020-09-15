@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"io/ioutil"
 	"log"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 
 	"gopkg.in/yaml.v2"
@@ -32,15 +34,16 @@ func main() {
 	spreadsheetsClient := spreadsheets.NewClient(config.SpreadsheetsConfig)
 	bot := bothandler.New(config.TelegramBotConfig, &spreadsheetsClient)
 
-	interrupt := make(chan os.Signal, 2)
+	interrupt := make(chan os.Signal)
 	signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM)
 
-	botStop := make(chan bool, 1)
-	go bot.Serve(botStop)
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	var wg sync.WaitGroup
+	bot.StartServe(ctx, &wg)
 
-	select {
-	case <-interrupt:
-		botStop <- true
-		<-botStop
-	}
+	log.Print("Waiting for interrupt")
+
+	<-interrupt
+	cancelFunc()
+	wg.Wait()
 }

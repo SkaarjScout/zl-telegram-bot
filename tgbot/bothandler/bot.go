@@ -1,8 +1,10 @@
 package bothandler
 
 import (
+	"context"
 	"fmt"
 	"log"
+	"sync"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 
@@ -46,12 +48,20 @@ func formatRowData(row []interface{}) string {
 	return fmt.Sprintf("Ник: %v\nИмя: %v\nБио: %v", row[0], row[1], row[2])
 }
 
-func (bot *Bot) Serve(stop chan bool) {
+func (bot *Bot) StartServe(ctx context.Context, wg *sync.WaitGroup) {
 	updates, err := bot.botApi.GetUpdatesChan(bot.updateConfig)
 	if err != nil {
 		log.Panicf("Error on creating update channel: %v", err)
 	}
 
+	wg.Add(bot.botConfig.WorkerCount)
+	for i := 0; i < bot.botConfig.WorkerCount; i++ {
+		go bot.processUpdates(ctx, wg, updates)
+	}
+}
+
+func (bot *Bot) processUpdates(ctx context.Context, wg *sync.WaitGroup, updates <-chan tgbotapi.Update) {
+	defer wg.Done()
 	for {
 		select {
 		case update := <-updates:
@@ -60,13 +70,15 @@ func (bot *Bot) Serve(stop chan bool) {
 				break
 			case update.Message.Command() == Find:
 				log.Print("Serving find")
-				if err = bot.serveFind(update); err != nil {
+				if err := bot.serveFind(update); err != nil {
 					log.Print(err)
 				}
 			}
-		case <-stop:
-			log.Print("Got a stop signal")
-			stop <- true
+		case <-ctx.Done():
+			if bot.botConfig.DebugEnabled {
+				log.Print("Goroutine shutting down")
+			}
+			// graceful shutdown
 			return
 		}
 	}

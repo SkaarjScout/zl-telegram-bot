@@ -6,3 +6,4 @@ TelegramBot:
     TelegramBotToken: '${TELEGRAM_BOT_TOKEN}'
     DebugEnabled: true
     UpdateTimeout: 60
+    WorkerCount: 8
