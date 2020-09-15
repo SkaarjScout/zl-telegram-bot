@@ -9,6 +9,10 @@ import (
 	"github.com/SkaarjScout/zl-telegram-bot/spreadsheets"
 )
 
+const (
+	Find string = "find"
+)
+
 type Bot struct {
 	botApi             *tgbotapi.BotAPI
 	updateConfig       tgbotapi.UpdateConfig
@@ -54,7 +58,7 @@ func (bot *Bot) Serve(stop chan bool) {
 			switch {
 			case update.Message == nil || !update.Message.IsCommand():
 				break
-			case update.Message.Command() == "find":
+			case update.Message.Command() == Find:
 				log.Print("Serving find")
 				if err = bot.serveFind(update); err != nil {
 					log.Print(err)
