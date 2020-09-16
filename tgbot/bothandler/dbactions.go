@@ -19,6 +19,7 @@ func (bot *Bot) addUser(ctx context.Context, userId int) error {
 	if err != nil {
 		return fmt.Errorf("error on connection get: %w", err)
 	}
+	defer conn.Close()
 	if err = bot.checkUserTable(ctx, conn); err != nil {
 		return fmt.Errorf("error on table check: %w", err)
 	}
