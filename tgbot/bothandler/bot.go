@@ -13,8 +13,9 @@ import (
 )
 
 const (
-	Find string = "find"
-	Add  string = "add"
+	Find      string = "find"
+	Add       string = "add"
+	Smalltalk string = "smalltalk"
 )
 
 type Bot struct {
@@ -22,10 +23,13 @@ type Bot struct {
 	updateConfig       tgbotapi.UpdateConfig
 	spreadsheetsClient *spreadsheets.Client
 	db                 *sql.DB
+	ctx                context.Context
+	conv               *ConversationManager
 	botConfig          Config
 }
 
 func New(
+	ctx context.Context,
 	config Config,
 	spreadsheetsClient *spreadsheets.Client,
 	db *sql.DB) Bot {
@@ -44,6 +48,8 @@ func New(
 		updateConfig,
 		spreadsheetsClient,
 		db,
+		ctx,
+		createConversationManager(ctx),
 		config,
 	}
 }
@@ -55,7 +61,7 @@ func formatRowData(row []interface{}) string {
 	return fmt.Sprintf("Ник: %v\nИмя: %v\nБио: %v", row[0], row[1], row[2])
 }
 
-func (bot *Bot) StartServe(ctx context.Context, wg *sync.WaitGroup) {
+func (bot *Bot) StartServe(wg *sync.WaitGroup) {
 	updates, err := bot.botApi.GetUpdatesChan(bot.updateConfig)
 	if err != nil {
 		log.Panicf("Error on creating update channel: %v", err)
@@ -63,7 +69,7 @@ func (bot *Bot) StartServe(ctx context.Context, wg *sync.WaitGroup) {
 
 	wg.Add(bot.botConfig.WorkerCount)
 	for i := 0; i < bot.botConfig.WorkerCount; i++ {
-		go bot.processUpdates(ctx, wg, updates)
+		go bot.processUpdates(bot.ctx, wg, updates)
 	}
 }
 
@@ -72,8 +78,14 @@ func (bot *Bot) processUpdates(ctx context.Context, wg *sync.WaitGroup, updates 
 	for {
 		select {
 		case update := <-updates:
+			if update.Message == nil {
+				continue
+			}
+			updateChan, startedConversation := bot.conv.conversationMap[update.Message.Chat.ID]
 			switch {
-			case update.Message == nil || !update.Message.IsCommand():
+			case startedConversation:
+				updateChan <- update
+			case !update.Message.IsCommand():
 				break
 			case update.Message.Command() == Find:
 				if err := bot.serveFind(update); err != nil {
@@ -83,13 +95,20 @@ func (bot *Bot) processUpdates(ctx context.Context, wg *sync.WaitGroup, updates 
 				if err := bot.serveAddUser(ctx, update); err != nil {
 					log.Print(err)
 				}
+			case update.Message.Command() == Smalltalk:
+				if err := bot.conv.startConversation(bot.goServeSmalltalk, update); err != nil {
+					log.Print(err)
+				}
 			}
 		case <-ctx.Done():
 			if bot.botConfig.DebugEnabled {
 				log.Print("Goroutine shutting down")
 			}
 			// graceful shutdown
+			bot.conv.waitForConversations()
 			return
+		case stopChatId := <-bot.conv.stopChan:
+			delete(bot.conv.conversationMap, stopChatId)
 		}
 	}
 }
@@ -115,4 +134,48 @@ func (bot *Bot) serveAddUser(ctx context.Context, update tgbotapi.Update) error 
 		return fmt.Errorf("error on message send: %w", err)
 	}
 	return nil
+}
+
+func (bot *Bot) goServeSmalltalk(
+	ctx context.Context,
+	chatId int64,
+	updateChan <-chan tgbotapi.Update,
+	stopChan chan<- int64,
+) {
+	defer func() {
+		if bot.botConfig.DebugEnabled {
+			log.Print("Ending smalltalk")
+		}
+		stopChan <- chatId
+	}()
+	select {
+	case <-ctx.Done():
+		return
+	case update := <-updateChan:
+		msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Smalltalk start")
+		if _, err := bot.botApi.Send(msg); err != nil {
+			log.Printf("error on message send: %v", err)
+			return
+		}
+	}
+	select {
+	case <-ctx.Done():
+		return
+	case update := <-updateChan:
+		msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Smalltalk cont")
+		if _, err := bot.botApi.Send(msg); err != nil {
+			log.Printf("error on message send: %v", err)
+			return
+		}
+	}
+	select {
+	case <-ctx.Done():
+		return
+	case update := <-updateChan:
+		msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Smalltalk end")
+		if _, err := bot.botApi.Send(msg); err != nil {
+			log.Printf("error on message send: %v", err)
+			return
+		}
+	}
 }

@@ -33,11 +33,12 @@ func main() {
 
 	db := GetPostgres(config.PostgresConfig)
 	spreadsheetsClient := spreadsheets.NewClient(config.SpreadsheetsConfig)
-	bot := bothandler.New(config.TelegramBotConfig, &spreadsheetsClient, db)
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
+	bot := bothandler.New(ctx, config.TelegramBotConfig, &spreadsheetsClient, db)
+
 	var wg sync.WaitGroup
-	bot.StartServe(ctx, &wg)
+	bot.StartServe(&wg)
 
 	interrupt := make(chan os.Signal)
 	signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM)
