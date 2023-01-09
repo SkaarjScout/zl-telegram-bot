@@ -8,8 +8,6 @@ import (
 	"sync"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
-
-	"github.com/SkaarjScout/zl-telegram-bot/spreadsheets"
 )
 
 const (
@@ -19,19 +17,17 @@ const (
 )
 
 type Bot struct {
-	botApi             *tgbotapi.BotAPI
-	updateConfig       tgbotapi.UpdateConfig
-	spreadsheetsClient *spreadsheets.Client
-	db                 *sql.DB
-	ctx                context.Context
-	conv               *ConversationManager
-	botConfig          Config
+	botApi       *tgbotapi.BotAPI
+	updateConfig tgbotapi.UpdateConfig
+	db           *sql.DB
+	ctx          context.Context
+	conv         *ConversationManager
+	botConfig    Config
 }
 
 func New(
 	ctx context.Context,
 	config Config,
-	spreadsheetsClient *spreadsheets.Client,
 	db *sql.DB) Bot {
 	bot, err := tgbotapi.NewBotAPI(config.TelegramBotToken)
 	if err != nil {
@@ -46,7 +42,6 @@ func New(
 	return Bot{
 		bot,
 		updateConfig,
-		spreadsheetsClient,
 		db,
 		ctx,
 		createConversationManager(ctx),
@@ -87,17 +82,13 @@ func (bot *Bot) processUpdates(ctx context.Context, wg *sync.WaitGroup, updates 
 				updateChan <- update
 			case !update.Message.IsCommand():
 				break
-			case update.Message.Command() == Find:
-				if err := bot.serveFind(update); err != nil {
-					log.Print(err)
-				}
 			case update.Message.Command() == Add:
 				if err := bot.serveAddUser(ctx, update); err != nil {
-					log.Print(err)
+					bot.onError(update, err)
 				}
 			case update.Message.Command() == Smalltalk:
 				if err := bot.conv.startConversation(bot.goServeSmalltalk, update); err != nil {
-					log.Print(err)
+					bot.onError(update, err)
 				}
 			}
 		case <-ctx.Done():
@@ -113,20 +104,13 @@ func (bot *Bot) processUpdates(ctx context.Context, wg *sync.WaitGroup, updates 
 	}
 }
 
-func (bot *Bot) serveFind(update tgbotapi.Update) error {
-	row, err := bot.spreadsheetsClient.FindRow(update.Message.CommandArguments())
-	if err != nil {
-		return fmt.Errorf("error on row find: %w", err)
-	}
-	msg := tgbotapi.NewMessage(update.Message.Chat.ID, formatRowData(row))
-	if _, err := bot.botApi.Send(msg); err != nil {
-		return fmt.Errorf("error on message send: %w", err)
-	}
-	return nil
+func (bot *Bot) onError(update tgbotapi.Update, err error) {
+	bot.botApi.Send(tgbotapi.NewMessage(update.Message.Chat.ID, "Something went wrong"))
+	log.Print(err)
 }
 
 func (bot *Bot) serveAddUser(ctx context.Context, update tgbotapi.Update) error {
-	if err := bot.addUser(ctx, update.Message.From.ID); err != nil {
+	if err := bot.addUser(ctx, update.Message.From.ID, update.Message.CommandArguments()); err != nil {
 		return fmt.Errorf("error on user add: %w", err)
 	}
 	msg := tgbotapi.NewMessage(update.Message.Chat.ID, "User added")

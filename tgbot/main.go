@@ -14,7 +14,6 @@ import (
 	"github.com/spf13/pflag"
 
 	"github.com/SkaarjScout/zl-telegram-bot/bothandler"
-	"github.com/SkaarjScout/zl-telegram-bot/spreadsheets"
 )
 
 func main() {
@@ -32,10 +31,9 @@ func main() {
 	}
 
 	db := GetPostgres(config.PostgresConfig)
-	spreadsheetsClient := spreadsheets.NewClient(config.SpreadsheetsConfig)
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
-	bot := bothandler.New(ctx, config.TelegramBotConfig, &spreadsheetsClient, db)
+	bot := bothandler.New(ctx, config.TelegramBotConfig, db)
 
 	var wg sync.WaitGroup
 	bot.StartServe(&wg)

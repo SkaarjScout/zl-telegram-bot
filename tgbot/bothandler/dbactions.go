@@ -14,7 +14,10 @@ func (bot *Bot) checkUserTable(ctx context.Context, conn *sql.Conn) error {
 	return err
 }
 
-func (bot *Bot) addUser(ctx context.Context, userId int) error {
+func (bot *Bot) addUser(ctx context.Context, userId int, userName string) error {
+	if userName == "" {
+		return fmt.Errorf("no user name provided")
+	}
 	conn, err := bot.db.Conn(ctx)
 	if err != nil {
 		return fmt.Errorf("error on connection get: %w", err)

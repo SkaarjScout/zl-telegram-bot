@@ -1,16 +1,12 @@
-Spreadsheets:
-    SpreadsheetId: '${SPREADSHEET_ID}'
-    CredentialsJson: '${CREDENTIALS_JSON}'
-    OauthRefreshToken: '${OAUTH_REFRESH_TOKEN}'
 TelegramBot:
-    TelegramBotToken: '${TELEGRAM_BOT_TOKEN}'
+    TelegramBotToken: '${TG_BOT_TOKEN}'
     DebugEnabled: true
     UpdateTimeout: 60
     WorkerCount: 8
     UserTableName: 'users'
 Postgres:
     Host: 'localhost'
-    Port: 54320
+    Port: ${PG_PORT}
     User: '${PG_USER}'
     Password: '${PG_PASSWORD}'
-    DbName: 'default'
+    DbName: '${PG_DB}'

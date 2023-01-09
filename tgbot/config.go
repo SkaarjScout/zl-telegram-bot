@@ -2,7 +2,6 @@ package main
 
 import (
 	"github.com/SkaarjScout/zl-telegram-bot/bothandler"
-	"github.com/SkaarjScout/zl-telegram-bot/spreadsheets"
 )
 
 type PostgresConfig struct {
@@ -14,7 +13,6 @@ type PostgresConfig struct {
 }
 
 type Config struct {
-	SpreadsheetsConfig spreadsheets.Config `yaml:"Spreadsheets"`
-	TelegramBotConfig  bothandler.Config   `yaml:"TelegramBot"`
-	PostgresConfig     PostgresConfig      `yaml:"Postgres"`
+	TelegramBotConfig bothandler.Config `yaml:"TelegramBot"`
+	PostgresConfig    PostgresConfig    `yaml:"Postgres"`
 }
